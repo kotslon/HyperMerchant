@@ -3,6 +3,7 @@ package grokswell.hypermerchant;
 import java.util.ArrayList;
 
 import org.bukkit.GameMode;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -39,7 +40,24 @@ public class ShopTransactions {
 		shopname=sname;
 
 	}
-	
+	//SELL ENCHANT
+	public boolean Sell(String enchant) {
+		HyperPlayer hp = hc_functions.getHyperPlayer(player);
+			if (player.getGameMode() == GameMode.CREATIVE && hc.s().gB("block-selling-in-creative-mode")) {
+				player.sendMessage(hc_lang.get("CANT_SELL_CREATIVE"));
+				return false;
+			}
+		if ((hc_factory.getShop(shopname).has(enchant))) {
+			HyperObject ho = hc_functions.getHyperObject(enchant, hp.getEconomy());
+			if (!hc.isLocked()) {
+				TransactionResponse response = hyperObAPI.sell(player, ho, 1);
+				response.sendMessages();
+				return true;
+			}
+		}
+		return false;
+	}
+	//SELL ITEM
 	public boolean Sell(ItemStack item_stack) {
 		HyperPlayer hp = hc_functions.getHyperPlayer(player);
 			if (player.getGameMode() == GameMode.CREATIVE && hc.s().gB("block-selling-in-creative-mode")) {
@@ -50,6 +68,7 @@ public class ShopTransactions {
 		int item_amount = item_stack.getAmount();
 		String item_id = Integer.toString(item_stack.getTypeId());
 		String item_data = Integer.toString(item_stack.getData().getData());
+		//if item is a tool, in toollist..
 		if (plugin.items_by_id.containsKey(item_id+":"+item_data)) {
 			item_name=plugin.items_by_id.get(item_id+":"+item_data);
 		}
@@ -68,6 +87,10 @@ public class ShopTransactions {
 	public void Buy(String item, int qty) {
 		HyperPlayer hp = hc_functions.getHyperPlayer(player);
 		HyperObject ho = hc_functions.getHyperObject(item, hp.getEconomy());
+		if (!hp.hasBuyPermission(hc_factory.getShop(shopname))) {
+			player.sendMessage("You cannot buy from this shop.");
+			return;
+		}
 		if (!hc.isLocked()) {
 			TransactionResponse response = hyperObAPI.buy(player, ho, qty);
 			response.sendMessages();

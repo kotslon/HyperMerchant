@@ -1,7 +1,11 @@
 package grokswell.hypermerchant;
 
+import static java.lang.System.out;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import net.citizensnpcs.api.npc.NPC;
 
@@ -10,6 +14,7 @@ import org.bukkit.GameMode;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -30,6 +35,8 @@ import regalowl.hyperconomy.EnchantmentClass;
 import regalowl.hyperconomy.HyperAPI;
 import regalowl.hyperconomy.HyperConomy;
 import regalowl.hyperconomy.HyperObject;
+import regalowl.hyperconomy.HyperObjectAPI;
+import regalowl.hyperconomy.HyperPlayer;
 import regalowl.hyperconomy.LanguageFile;
 import regalowl.hyperconomy.ShopFactory;
 
@@ -44,6 +51,7 @@ public class ShopMenu implements Listener {
     int last_page; //the last_page number in the menu
     private HyperMerchantPlugin plugin;
     private Player player;
+    private String economy_name;
     private String inventory_name;
     private Inventory inventory;
     private InventoryView inventory_view;
@@ -53,6 +61,8 @@ public class ShopMenu implements Listener {
 	NPC npc;
 	ArrayList<ArrayList<String>> pages;
 	HyperAPI hyperAPI = new HyperAPI();
+	HyperObjectAPI hoa = new HyperObjectAPI();
+	HyperPlayer hp;
     
     
 	HyperConomy hc = HyperConomy.hc;
@@ -74,6 +84,7 @@ public class ShopMenu implements Listener {
     	this.plugin.getServer().getPluginManager().registerEvents(this, this.plugin);
         this.inventory_name = this.name+"<>"+player.getName();
         this.inventory = Bukkit.createInventory(player, size, this.inventory_name);
+        this.economy_name = hyperAPI.getShopEconomy(this.name);
         
 		ShopStock shopstock = new ShopStock(sender, this.player, this.name, this.plugin);
         shopstock.SortStock(2);
@@ -86,7 +97,15 @@ public class ShopMenu implements Listener {
 		
 		
     }
-   
+    
+    private ItemStack setItemNameAndLore(ItemStack item, String name, String[] lore) {
+        ItemMeta im = item.getItemMeta();
+            im.setDisplayName(ChatColor.GOLD+name);
+            im.setLore(Arrays.asList(lore));
+        item.setItemMeta(im);
+        return item;
+    }
+    
     public ShopMenu setOption(int position, ItemStack icon, String name, String... info) {
     	this.optionNames[position] = name;
 		try {
@@ -98,7 +117,7 @@ public class ShopMenu implements Listener {
 		}
         return this;
     }
-
+    //
     public void loadPage() {
     	this.optionIcons = null;
     	this.optionIcons = new ItemStack[size];
@@ -108,28 +127,37 @@ public class ShopMenu implements Listener {
 	    .setOption(45, new ItemStack(Material.STATIONARY_LAVA, 1), "Первая страница", "Перейти на первую страницу.")
 	    .setOption(52, new ItemStack(Material.STATIONARY_WATER, 1), "Следующая страница", "Перейти на следующую страницу.")
 	    .setOption(53, new ItemStack(Material.STATIONARY_LAVA, 1), "Последняя страница", "Перейти на последнюю страницу.")
-	    .setOption(47, new ItemStack(Material.PAPER, 1), "Левая кнопка мыши", "Купить 1 штуку")
-	    .setOption(48, new ItemStack(Material.PAPER, 1), "Shift+Левая кнопка мыши", "Купить 8 штук")
-	    .setOption(49, new ItemStack(Material.PAPER, 1), "Shift+Правая кнопка мыши", "Купить 1 стак")
-	    .setOption(50, new ItemStack(Material.PAPER, 1), "Чтобы продать:", "Перетащите товар в инвентарь магазина")
-	    .setOption(51, new ItemStack(Material.PAPER, 1), "Зачарования:","Возьмите предмет в руку");
+	    .setOption(47, new ItemStack(Material.PAPER, 1), "Левая кнопка мыши:", "Купить 1 штуку","", "Shift+Левая кнопка мыши", "Купить 8 штук")
+	    .setOption(48, new ItemStack(Material.PAPER, 1), "", "Shift+Правая кнопка мыши", "Купить 1 стак", "", "Чтобы продать:", "Перенесите товар в инвентарь магазина")
+        .setOption(49, new ItemStack(Material.PAPER, 1), "Чтобы купить зачарования:", "Держите предмет в руке")
+	    .setOption(50, new ItemStack(Material.PAPER, 1), "Чтобы продать зачарования:", "Нажмите левой кнопкой мыши на зачарованном предмете", "с имеющимся в магазине зачарованием")
+	    .setOption(51, new ItemStack(Material.PAPER, 1), "","");
     	int count = 0;
 		ArrayList<String> page=(ArrayList<String>) pages.get(this.page_number);
 		
 		for (String item : page) {
-	        Double cost = 0.0;
-	        double stock = 0;
-			HyperObject ho = hc_functions.getHyperObject(item, "default");
+	        double cost = 0.0;
+	        double costtax =0.0;
+	        double value = 0.0;
+	        double stock = 0.0;
+	        
+			HyperObject ho = hc_functions.getHyperObject(item, this.economy_name);
 	        if (hc_functions.itemTest(item)) {
-				cost = ho.getCost(1);
-				double taxpaid = ho.getPurchaseTax(cost);
-				cost = hc_calc.twoDecimals(cost + taxpaid);
-				stock = hc_functions.getHyperObject(item, "default").getStock();
+				value = ho.getValue(1);
+				value = hc_calc.twoDecimals(value - ho.getSalesTaxEstimate(value));
+	        	cost = ho.getCost(1);
+				costtax = ho.getPurchaseTax(cost);
+				cost = hc_calc.twoDecimals(cost + costtax);
+				stock = hc_functions.getHyperObject(item, this.economy_name).getStock();
 			} else if (hc_functions.enchantTest(item)) {
-				cost = ho.getCost(EnchantmentClass.DIAMOND);
+				cost = ho.getCost(1);
 				cost = cost + ho.getPurchaseTax(cost);
-				stock = hc_functions.getHyperObject(item, "default").getStock();
+				stock = hc_functions.getHyperObject(item, this.economy_name).getStock();
+				value = hoa.getTrueSaleValue(ho, hc_functions.getHyperPlayer(player.getName()), 
+						EnchantmentClass.DIAMOND, 1);
+				value = value-ho.getSalesTaxEstimate(value);
 			}
+	        
 			ItemStack stack;
 			if (item.equals("xp")) {
 				stack = new ItemStack(Material.STONE, 1);
@@ -137,7 +165,9 @@ public class ShopMenu implements Listener {
 			else {
 				stack = new ItemStack(Material.getMaterial(ho.getId()), 1, (short) ho.getData());
 			}
-			this.setOption(count, stack, item, "Наличие: "+stock+"  Цена: "+cost);
+			this.setOption(count, stack, item, ChatColor.WHITE+"Цена: "+ChatColor.DARK_PURPLE+String.valueOf(cost),
+					ChatColor.WHITE+"Продажа: "+ChatColor.DARK_PURPLE+String.valueOf(value),
+					ChatColor.WHITE+"Наличие: "+ChatColor.DARK_PURPLE+String.valueOf((int) stock) );
 	        count++;
 		}
 		
@@ -212,15 +242,6 @@ public class ShopMenu implements Listener {
     	}
     }
     
-    //@EventHandler(priority=EventPriority.HIGHEST)
-    //void onInventoryCreative(InventoryClickEvent event) {
-    //	if (player.getGameMode().compareTo(GameMode.CREATIVE) == 0) {
-    //		onInventoryClickOrCreative(event);
-    //	} else {
-    //		event.setCancelled(true);
-    //	}
-    //}
-    
     void onInventoryClickOrCreative(InventoryClickEvent event) {
         if (event.getInventory().getTitle().equals(this.inventory_name)) {
     		int slot_num = event.getRawSlot();
@@ -245,21 +266,53 @@ public class ShopMenu implements Listener {
         		}
             }
         	else if (slot_num < size && slot_num >= 0 && (item_in_hand.getTypeId() > 0)){
-        		if (this.shop_trans.Sell(item_in_hand)) {
-        			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
-        			//return;
-        		} else if (item_in_hand.getDurability() < item_in_hand.getType().getMaxDurability()){
-        			player.sendMessage(ChatColor.YELLOW+"Этот магазин не покупает повреждённые "+
-							Material.getMaterial(item_in_hand.getTypeId()).name().toLowerCase()+".");
-        			player.getInventory().addItem(item_in_hand);
-        			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
-        			//return;
-        		} else {
-        			player.sendMessage(ChatColor.YELLOW+"Этот магазин не торгует "+
-							Material.getMaterial(item_in_hand.getTypeId()).name().toLowerCase()+".");
-        			player.getInventory().addItem(item_in_hand);
-        			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
-        			//return;
+        		hp = hc_functions.getHyperPlayer(player);
+        		if (!(hp.hasSellPermission(hc_factory.getShop(this.name)))) {
+        			player.sendMessage("Вы не можете продать в этот магазин.");
+        		} 
+        		else {
+	        		HashMap<Integer, Integer> enchants = new HashMap<Integer, Integer>();
+	        		for (Enchantment ench : item_in_hand.getEnchantments().keySet()) {
+	        			enchants.put(ench.getId(),item_in_hand.getEnchantments().get(ench));
+	        		}
+	        		
+	        		// SELLING ENCHANTS
+	        		if (!enchants.isEmpty()) {
+	                	String display_name = this.optionIcons[slot_num].getItemMeta().getDisplayName().replace("§6", "");
+	                	if (plugin.enchants_by_name.containsKey(display_name)) {
+	                		ItemStack item_holding = player.getItemInHand().clone();
+	                		player.setItemInHand(player.getItemOnCursor().clone());
+	                		if (this.shop_trans.Sell(display_name)) {
+	            				player.setItemOnCursor(player.getItemInHand());
+	            				player.setItemInHand(item_holding);
+	                		} else {
+	                			player.sendMessage(ChatColor.YELLOW+"Предмет "+player.getItemInHand().getItemMeta().getDisplayName()+
+	                					" не зачарован "+display_name+".");
+	
+	                    		player.setItemInHand(item_holding);
+	                		}
+	                	} else {
+	                		player.sendMessage(ChatColor.YELLOW+"Этот магазин не купит ваш зачарованный предмет.");
+	                	}
+	                }
+	                
+	                // SELLING ITEMS
+	                else if (this.shop_trans.Sell(item_in_hand)) {
+	        			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
+	        			//return;
+	        		} else if (item_in_hand.getDurability() < item_in_hand.getType().getMaxDurability()){
+	        			player.sendMessage(ChatColor.YELLOW+"Этот магазин не покупает повреждённый предмет "+
+								Material.getMaterial(item_in_hand.getTypeId()).name().toLowerCase()+".");
+	        			player.getInventory().addItem(item_in_hand);
+	        			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
+	        			//return;
+	        		} else {
+	        			player.sendMessage(ChatColor.YELLOW+"Этот магазин не торгует "+
+								Material.getMaterial(item_in_hand.getTypeId()).name().toLowerCase()+".");
+	        			player.getInventory().addItem(item_in_hand);
+	        			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
+	        			//return;
+	        		}
         		}
         	}
             else if (slot_num == 46){
@@ -317,13 +370,5 @@ public class ShopMenu implements Listener {
         this.inventory_view = null;
         this.shop_trans = null;
         this.inventory_name = null;
-    }
-   
-    private ItemStack setItemNameAndLore(ItemStack item, String name, String[] lore) {
-        ItemMeta im = item.getItemMeta();
-            im.setDisplayName(name);
-            im.setLore(Arrays.asList(lore));
-        item.setItemMeta(im);
-        return item;
     }
 }
