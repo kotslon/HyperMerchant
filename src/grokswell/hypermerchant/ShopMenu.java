@@ -104,15 +104,15 @@ public class ShopMenu implements Listener {
     	this.optionIcons = new ItemStack[size];
     	this.optionNames = null;
     	this.optionNames = new String[size];
-    	this.setOption(46, new ItemStack(Material.STATIONARY_WATER, 1), "Back 1", "Go back to the previous page.")
-	    .setOption(45, new ItemStack(Material.STATIONARY_LAVA, 1), "First Page", "Go to the first page.")
-	    .setOption(52, new ItemStack(Material.STATIONARY_WATER, 1), "Forward 1", "Go to the next page.")
-	    .setOption(53, new ItemStack(Material.STATIONARY_LAVA, 1), "Last page", "Go to the last page.")
-	    .setOption(47, new ItemStack(Material.PAPER, 1), "Left-Click", "Purchase 1 item")
-	    .setOption(48, new ItemStack(Material.PAPER, 1), "Shift+Left-Click", "Purchase 8 items")
-	    .setOption(49, new ItemStack(Material.PAPER, 1), "Shift+Right-Click", "Purchase 1 Stack")
-	    .setOption(50, new ItemStack(Material.PAPER, 1), "To Sell:", "Place items in shop inventory")
-	    .setOption(51, new ItemStack(Material.PAPER, 1), "Enchantments:","Have target item in hand");
+    	this.setOption(46, new ItemStack(Material.STATIONARY_WATER, 1), "Предыдущая страница", "Перейти на предыдущую страницу.")
+	    .setOption(45, new ItemStack(Material.STATIONARY_LAVA, 1), "Первая страница", "Перейти на первую страницу.")
+	    .setOption(52, new ItemStack(Material.STATIONARY_WATER, 1), "Следующая страница", "Перейти на следующую страницу.")
+	    .setOption(53, new ItemStack(Material.STATIONARY_LAVA, 1), "Последняя страница", "Перейти на последнюю страницу.")
+	    .setOption(47, new ItemStack(Material.PAPER, 1), "Левая кнопка мыши", "Купить 1 штуку")
+	    .setOption(48, new ItemStack(Material.PAPER, 1), "Shift+Левая кнопка мыши", "Купить 8 штук")
+	    .setOption(49, new ItemStack(Material.PAPER, 1), "Shift+Правая кнопка мыши", "Купить 1 стак")
+	    .setOption(50, new ItemStack(Material.PAPER, 1), "Чтобы продать:", "Перетащите товар в инвентарь магазина")
+	    .setOption(51, new ItemStack(Material.PAPER, 1), "Зачарования:","Возьмите предмет в руку");
     	int count = 0;
 		ArrayList<String> page=(ArrayList<String>) pages.get(this.page_number);
 		
@@ -137,7 +137,7 @@ public class ShopMenu implements Listener {
 			else {
 				stack = new ItemStack(Material.getMaterial(ho.getId()), 1, (short) ho.getData());
 			}
-			this.setOption(count, stack, item, "Stock: "+stock+"  Price: "+cost);
+			this.setOption(count, stack, item, "Наличие: "+stock+"  Цена: "+cost);
 	        count++;
 		}
 		
@@ -249,13 +249,13 @@ public class ShopMenu implements Listener {
         			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
         			//return;
         		} else if (item_in_hand.getDurability() < item_in_hand.getType().getMaxDurability()){
-        			player.sendMessage(ChatColor.YELLOW+"This shop will not purchase a damaged "+
+        			player.sendMessage(ChatColor.YELLOW+"Этот магазин не покупает повреждённые "+
 							Material.getMaterial(item_in_hand.getTypeId()).name().toLowerCase()+".");
         			player.getInventory().addItem(item_in_hand);
         			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
         			//return;
         		} else {
-        			player.sendMessage(ChatColor.YELLOW+"This shop does not deal in "+
+        			player.sendMessage(ChatColor.YELLOW+"Этот магазин не торгует "+
 							Material.getMaterial(item_in_hand.getTypeId()).name().toLowerCase()+".");
         			player.getInventory().addItem(item_in_hand);
         			this.inventory_view.setCursor(new ItemStack(Material.getMaterial(0)));
