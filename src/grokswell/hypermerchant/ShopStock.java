@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 
 import regalowl.hyperconomy.DataHandler;
 import regalowl.hyperconomy.HyperConomy;
+import regalowl.hyperconomy.HyperAPI;
 import regalowl.hyperconomy.HyperObjectAPI;
 import regalowl.hyperconomy.ShopFactory;
 
@@ -27,6 +28,7 @@ public class ShopStock {
 	public ShopFactory hc_factory;
 	public DataHandler hc_functions;
 	private HyperObjectAPI hoa;
+    HyperAPI hyperAPI = new HyperAPI();
 	
 	ShopStock(CommandSender snder, Player player, String sname, HyperMerchantPlugin hmp) {
 		hc = HyperConomy.hc;
@@ -38,15 +40,16 @@ public class ShopStock {
 
 		try {
     		String nameshop = hc_factory.getShop(shopname).getName();
+            String nameecon = hyperAPI.getShopEconomy(nameshop);
 			ArrayList<String> names = hc_functions.getNames();
 			int i = 0;
 			while(i < names.size()) {
 				String cname = names.get(i);
 				if (nameshop == null || hc_factory.getShop(nameshop).has(cname)) {
 					items_in_stock.add(cname);
-					item_nums_sorted.add(String.valueOf(hoa.getType(cname, "default").name() + hoa.getId(cname, "default")) + cname);
+					item_nums_sorted.add(String.valueOf(hoa.getType(cname, nameecon).name() + hoa.getId(cname, nameecon)) + cname);
 					//item_materials_sorted.add(hoa.getType(cname, "default").name() + hoa.getMaterial(cname, "default") + cname);
-					items_by_num.put(String.valueOf(hoa.getType(cname, "default").name() + hoa.getId(cname, "default")) + cname, cname);
+					items_by_num.put(String.valueOf(hoa.getType(cname, nameecon).name() + hoa.getId(cname, nameecon)) + cname, cname);
 					//items_by_material.put(hoa.getType(cname, "default").name() + hoa.getMaterial(cname, "default") + cname, cname);
 				}
 				i++;
